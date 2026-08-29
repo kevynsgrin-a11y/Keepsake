@@ -1,39 +1,33 @@
 import React, { useState } from 'react';
-import { Printer, Download, BookOpen, CheckCircle, FileText, Sparkles } from 'lucide-react';
-import { MemoryItem, CURRENT_ALMANAC } from '../data/keepsakeData';
+import { Printer } from 'lucide-react';
+import { MemoryItem } from '../data/keepsakeData';
+import { RecommendedResources } from './RecommendedResources';
 
 interface PrintExporterProps {
   memories: MemoryItem[];
 }
 
 export const PrintExporter: React.FC<PrintExporterProps> = ({ memories }) => {
-  const [selectedIds, setSelectedIds] = useState<string[]>(memories.map(m => m.id));
+  const selectedIds = memories.map(m => m.id);
   const [includeCover, setIncludeCover] = useState(true);
   const [includeLineage, setIncludeLineage] = useState(true);
-
-  const toggleSelect = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter(i => i !== id));
-    } else {
-      setSelectedIds([...selectedIds, id]);
-    }
-  };
 
   const handlePrint = () => {
     window.print();
   };
 
   const selectedMemories = memories.filter(m => selectedIds.includes(m.id));
+  const compiledDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   return (
     <div className="space-y-8 animate-fade-in">
-      
+
       {/* Controls Header (Hidden during print) */}
       <div className="bg-white/90 rounded-2xl p-6 border border-amber-200 shadow-sm space-y-4 no-print">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-serif-title font-bold text-stone-900 flex items-center space-x-2">
-              <Printer className="w-6 h-6 text-amber-700" />
+              <Printer className="w-6 h-6 text-amber-700" aria-hidden="true" />
               <span>Printable Heirloom Keepsake Album</span>
             </h2>
             <p className="text-sm text-stone-600 font-garamond italic">
@@ -45,7 +39,7 @@ export const PrintExporter: React.FC<PrintExporterProps> = ({ memories }) => {
             onClick={handlePrint}
             className="px-6 py-2.5 bg-gradient-to-r from-amber-700 to-amber-900 text-amber-50 font-bold text-sm rounded-xl shadow-md hover:shadow-lg transition flex items-center space-x-2 self-start sm:self-auto ring-2 ring-amber-600/30"
           >
-            <Printer className="w-4 h-4 text-amber-300" />
+            <Printer className="w-4 h-4 text-amber-300" aria-hidden="true" />
             <span>Print Heirloom Book (PDF)</span>
           </button>
         </div>
@@ -78,7 +72,7 @@ export const PrintExporter: React.FC<PrintExporterProps> = ({ memories }) => {
 
       {/* Printable Document Preview Area */}
       <div className="bg-amber-50/60 p-4 sm:p-10 rounded-2xl border border-amber-200 print:border-none print:p-0 print:bg-white">
-        
+
         {/* Cover Page */}
         {includeCover && (
           <div className="bg-white p-10 sm:p-16 rounded-xl border border-amber-200/80 shadow-md text-center space-y-6 mb-10 print:shadow-none print:border-b print:mb-12">
@@ -93,12 +87,13 @@ export const PrintExporter: React.FC<PrintExporterProps> = ({ memories }) => {
             </p>
             <div className="w-24 h-0.5 bg-amber-400 mx-auto" />
             <p className="text-xs uppercase font-bold tracking-widest text-stone-500">
-              COMPILED {CURRENT_ALMANAC.dateString.toUpperCase()} • EDITION NO. 1
+              COMPILED {compiledDate.toUpperCase()} • EDITION NO. 1
             </p>
           </div>
         )}
 
         {/* Selected Memories */}
+        <h2 className="sr-only">Selected Memories</h2>
         <div className="space-y-8">
           {selectedMemories.map((mem, idx) => (
             <div
@@ -120,7 +115,16 @@ export const PrintExporter: React.FC<PrintExporterProps> = ({ memories }) => {
 
               {mem.imageUrl && (
                 <div className="h-64 rounded-xl overflow-hidden my-3">
-                  <img src={mem.imageUrl} alt={mem.title} className="w-full h-full object-cover" />
+                  <img
+                    src={mem.imageUrl}
+                    alt={mem.title}
+                    loading="lazy"
+                    decoding="async"
+                    width={800}
+                    height={450}
+                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/memory-placeholder.svg'; }}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               )}
 
@@ -138,6 +142,14 @@ export const PrintExporter: React.FC<PrintExporterProps> = ({ memories }) => {
         </div>
 
       </div>
+
+      <RecommendedResources
+        title="Turn This Into a Real, Bound Book"
+        links={[
+          { label: 'Photo Book Binding Partner', description: 'Order a hardcover, archival-quality print of this album.', href: '#' },
+          { label: 'Archival Photo Boxes', description: 'Acid-free storage for the originals behind these stories.', href: '#' },
+        ]}
+      />
 
     </div>
   );

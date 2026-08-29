@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Users, Shield, Heart, MapPin, Sparkles, BookOpen, Plus } from 'lucide-react';
+import { Shield, MapPin, Plus } from 'lucide-react';
 import { FamilyMember, INITIAL_FAMILY_MEMBERS } from '../data/keepsakeData';
+import { usePersistedState } from '../hooks/usePersistedState';
+import { RecommendedResources } from './RecommendedResources';
 
 export const FamilyHeritage: React.FC = () => {
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>(INITIAL_FAMILY_MEMBERS);
+  const [familyMembers, setFamilyMembers] = usePersistedState<FamilyMember[]>('keepsake_family_members', INITIAL_FAMILY_MEMBERS);
   const [selectedGen, setSelectedGen] = useState<string>('All');
   const [showAddMember, setShowAddMember] = useState<boolean>(false);
 
@@ -25,7 +27,7 @@ export const FamilyHeritage: React.FC = () => {
       birthYear,
       hometown,
       motto,
-      avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80",
+      avatarUrl: "/images/avatar-placeholder.svg",
       generation,
       keyMemoriesCount: 1
     };
@@ -43,12 +45,12 @@ export const FamilyHeritage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      
+
       {/* Header & Crest Showcase */}
       <div className="bg-gradient-to-r from-amber-950 via-stone-900 to-amber-950 text-amber-50 rounded-2xl p-6 sm:p-10 border border-amber-800/40 shadow-lg relative overflow-hidden">
         <div className="max-w-3xl space-y-4 relative z-10">
           <div className="inline-flex items-center space-x-2 px-3 py-1 bg-amber-500/20 border border-amber-400/30 rounded-full text-xs font-medium text-amber-300">
-            <Shield className="w-3.5 h-3.5" />
+            <Shield className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Family Lineage & Generations</span>
           </div>
 
@@ -60,11 +62,16 @@ export const FamilyHeritage: React.FC = () => {
             "A family is a tree of living history—deep roots grounded in wisdom, strong branches reaching into every tomorrow."
           </p>
 
-          <div className="pt-2 flex flex-wrap gap-2">
+          <p className="text-xs text-amber-300/70 italic">
+            The Harrison & Sterling family shown below is a sample to illustrate the feature — add your own family members to replace it.
+          </p>
+
+          <div className="pt-2 flex flex-wrap gap-2" role="group" aria-label="Filter by generation">
             {['All', 'Ancestors', 'Grandparents', 'Parents', 'Current Gen'].map(g => (
               <button
                 key={g}
                 onClick={() => setSelectedGen(g)}
+                aria-pressed={selectedGen === g}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
                   selectedGen === g
                     ? 'bg-amber-400 text-stone-950 shadow-sm font-bold'
@@ -87,7 +94,7 @@ export const FamilyHeritage: React.FC = () => {
           onClick={() => setShowAddMember(!showAddMember)}
           className="px-3.5 py-1.5 bg-amber-900 hover:bg-amber-950 text-amber-100 text-xs font-medium rounded-lg transition flex items-center space-x-1.5"
         >
-          <Plus className="w-3.5 h-3.5 text-amber-300" />
+          <Plus className="w-3.5 h-3.5 text-amber-300" aria-hidden="true" />
           <span>{showAddMember ? 'Close Form' : '+ Add Family Keeper'}</span>
         </button>
       </div>
@@ -98,8 +105,9 @@ export const FamilyHeritage: React.FC = () => {
           <h3 className="text-base font-serif-title font-bold text-amber-950">Add Family Member to Lineage</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Full Name & Dates</label>
+              <label htmlFor="fam-name" className="block text-xs font-semibold text-amber-900 mb-1">Full Name & Dates</label>
               <input
+                id="fam-name"
                 type="text"
                 required
                 placeholder="e.g. Rose Sterling Harrison"
@@ -109,8 +117,9 @@ export const FamilyHeritage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Family Relation</label>
+              <label htmlFor="fam-relation" className="block text-xs font-semibold text-amber-900 mb-1">Family Relation</label>
               <input
+                id="fam-relation"
                 type="text"
                 required
                 placeholder="e.g. Grandmother / Patriarch"
@@ -120,8 +129,9 @@ export const FamilyHeritage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Generation Group</label>
+              <label htmlFor="fam-generation" className="block text-xs font-semibold text-amber-900 mb-1">Generation Group</label>
               <select
+                id="fam-generation"
                 value={generation}
                 onChange={e => setGeneration(e.target.value as any)}
                 className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm"
@@ -135,8 +145,9 @@ export const FamilyHeritage: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Hometown / Birthplace</label>
+              <label htmlFor="fam-hometown" className="block text-xs font-semibold text-amber-900 mb-1">Hometown / Birthplace</label>
               <input
+                id="fam-hometown"
                 type="text"
                 placeholder="e.g. St. Paul, Minnesota"
                 value={hometown}
@@ -145,8 +156,9 @@ export const FamilyHeritage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Life Motto / Favorite Saying</label>
+              <label htmlFor="fam-motto" className="block text-xs font-semibold text-amber-900 mb-1">Life Motto / Favorite Saying</label>
               <input
+                id="fam-motto"
                 type="text"
                 placeholder="e.g. Honor in all deeds, kindness in all speech."
                 value={motto}
@@ -171,6 +183,11 @@ export const FamilyHeritage: React.FC = () => {
             <img
               src={mem.avatarUrl}
               alt={mem.name}
+              loading="lazy"
+              decoding="async"
+              width={80}
+              height={80}
+              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/avatar-placeholder.svg'; }}
               className="w-20 h-20 rounded-2xl object-cover ring-4 ring-amber-100 shadow-xs flex-shrink-0"
             />
             <div className="space-y-2 flex-1">
@@ -189,7 +206,7 @@ export const FamilyHeritage: React.FC = () => {
                 <span>{mem.relation}</span>
                 <span>•</span>
                 <span className="flex items-center space-x-1">
-                  <MapPin className="w-3 h-3 text-amber-700" />
+                  <MapPin className="w-3 h-3 text-amber-700" aria-hidden="true" />
                   <span>{mem.hometown}</span>
                 </span>
               </div>
@@ -203,6 +220,14 @@ export const FamilyHeritage: React.FC = () => {
           </div>
         ))}
       </div>
+
+      <RecommendedResources
+        title="Trace the Lineage Further"
+        links={[
+          { label: 'Genealogy DNA Testing', description: 'Confirm and extend the family tree with a heritage DNA kit.', href: '#' },
+          { label: 'Genealogy Research Subscription', description: 'Search historical records for ancestors beyond living memory.', href: '#' },
+        ]}
+      />
 
     </div>
   );

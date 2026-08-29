@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="800" height="450" fill="#fef3c7"/>
+  <circle cx="400" cy="205" r="90" fill="none" stroke="#b45309" stroke-width="2" opacity="0.5"/>
+  <text x="400" y="235" font-size="72" text-anchor="middle">📖</text>
+  <text x="400" y="380" font-family="Georgia, serif" font-size="18" fill="#92400e" text-anchor="middle">Image unavailable</text>
+</svg>

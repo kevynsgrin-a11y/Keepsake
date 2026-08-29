@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Gift, Heart, Sparkles, Star, Bell } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Gift, Bell } from 'lucide-react';
+import { usePersistedState } from '../hooks/usePersistedState';
+import { isSameCalendarDay } from '../utils/almanac';
 
 export interface CalendarEvent {
   id: string;
@@ -45,11 +47,14 @@ export const INITIAL_CALENDAR_EVENTS: CalendarEvent[] = [
   }
 ];
 
+const today = new Date();
+
 export const AlmanacCalendar: React.FC = () => {
-  const [currentMonthIndex, setCurrentMonthIndex] = useState<number>(7); // August (0-indexed = 7)
-  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_CALENDAR_EVENTS);
+  const [viewYear, setViewYear] = useState<number>(today.getFullYear());
+  const [currentMonthIndex, setCurrentMonthIndex] = useState<number>(today.getMonth());
+  const [events, setEvents] = usePersistedState<CalendarEvent[]>('keepsake_calendar_events', INITIAL_CALENDAR_EVENTS);
   const [showAddEvent, setShowAddEvent] = useState<boolean>(false);
-  
+
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventDate, setNewEventDate] = useState('');
   const [newEventType, setNewEventType] = useState<'Birthday' | 'Anniversary' | 'Tradition' | 'Memorial'>('Birthday');
@@ -61,11 +66,21 @@ export const AlmanacCalendar: React.FC = () => {
   ];
 
   const handlePrevMonth = () => {
-    setCurrentMonthIndex((prev) => (prev === 0 ? 11 : prev - 1));
+    if (currentMonthIndex === 0) {
+      setCurrentMonthIndex(11);
+      setViewYear(y => y - 1);
+    } else {
+      setCurrentMonthIndex(m => m - 1);
+    }
   };
 
   const handleNextMonth = () => {
-    setCurrentMonthIndex((prev) => (prev === 11 ? 0 : prev + 1));
+    if (currentMonthIndex === 11) {
+      setCurrentMonthIndex(0);
+      setViewYear(y => y + 1);
+    } else {
+      setCurrentMonthIndex(m => m + 1);
+    }
   };
 
   const handleAddEventSubmit = (e: React.FormEvent) => {
@@ -88,13 +103,12 @@ export const AlmanacCalendar: React.FC = () => {
     setShowAddEvent(false);
   };
 
-  // Days in selected month of 2026
-  const daysInMonth = new Date(2026, currentMonthIndex + 1, 0).getDate();
-  const firstDayOfWeek = new Date(2026, currentMonthIndex, 1).getDay();
+  const daysInMonth = new Date(viewYear, currentMonthIndex + 1, 0).getDate();
+  const firstDayOfWeek = new Date(viewYear, currentMonthIndex, 1).getDay();
 
   return (
     <div className="space-y-6 animate-fade-in">
-      
+
       {/* Header Bar */}
       <div className="bg-white/90 rounded-2xl p-6 border border-amber-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -110,7 +124,7 @@ export const AlmanacCalendar: React.FC = () => {
           onClick={() => setShowAddEvent(!showAddEvent)}
           className="px-4 py-2 bg-amber-900 hover:bg-amber-950 text-amber-100 font-medium text-xs rounded-lg transition shadow-xs flex items-center space-x-2 self-start sm:self-auto"
         >
-          <Bell className="w-4 h-4 text-amber-300" />
+          <Bell className="w-4 h-4 text-amber-300" aria-hidden="true" />
           <span>{showAddEvent ? 'Close Form' : '+ Add Anniversary / Date'}</span>
         </button>
       </div>
@@ -121,8 +135,9 @@ export const AlmanacCalendar: React.FC = () => {
           <h3 className="text-base font-serif-title font-bold text-amber-950">Add New Family Anniversary or Event</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Event Title</label>
+              <label htmlFor="cal-event-title" className="block text-xs font-semibold text-amber-900 mb-1">Event Title</label>
               <input
+                id="cal-event-title"
                 type="text"
                 required
                 placeholder="e.g. Uncle John's Birthday"
@@ -132,8 +147,9 @@ export const AlmanacCalendar: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Date</label>
+              <label htmlFor="cal-event-date" className="block text-xs font-semibold text-amber-900 mb-1">Date</label>
               <input
+                id="cal-event-date"
                 type="date"
                 required
                 value={newEventDate}
@@ -142,8 +158,9 @@ export const AlmanacCalendar: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Category Type</label>
+              <label htmlFor="cal-event-type" className="block text-xs font-semibold text-amber-900 mb-1">Category Type</label>
               <select
+                id="cal-event-type"
                 value={newEventType}
                 onChange={e => setNewEventType(e.target.value as any)}
                 className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm"
@@ -156,8 +173,9 @@ export const AlmanacCalendar: React.FC = () => {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-amber-900 mb-1">Notes / Instructions</label>
+            <label htmlFor="cal-event-notes" className="block text-xs font-semibold text-amber-900 mb-1">Notes / Instructions</label>
             <input
+              id="cal-event-notes"
               type="text"
               placeholder="e.g. Call at 10 AM, Send handwritten card"
               value={newEventNotes}
@@ -176,28 +194,30 @@ export const AlmanacCalendar: React.FC = () => {
 
       {/* Main Grid Layout: Month View + Event List */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Month View (2 Cols) */}
         <div className="lg:col-span-2 bg-white/90 rounded-2xl p-6 border border-amber-200 shadow-sm space-y-6">
-          
+
           {/* Controls */}
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-serif-title font-bold text-stone-900 flex items-center space-x-2">
-              <CalendarIcon className="w-5 h-5 text-amber-700" />
-              <span>{monthNames[currentMonthIndex]} 2026</span>
+              <CalendarIcon className="w-5 h-5 text-amber-700" aria-hidden="true" />
+              <span>{monthNames[currentMonthIndex]} {viewYear}</span>
             </h3>
             <div className="flex items-center space-x-2">
               <button
                 onClick={handlePrevMonth}
+                aria-label="Previous month"
                 className="p-2 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 transition"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4" aria-hidden="true" />
               </button>
               <button
                 onClick={handleNextMonth}
+                aria-label="Next month"
                 className="p-2 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 transition"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -217,13 +237,14 @@ export const AlmanacCalendar: React.FC = () => {
             {/* Days */}
             {Array.from({ length: daysInMonth }).map((_, idx) => {
               const dayNum = idx + 1;
-              const formattedDateStr = `2026-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+              const formattedDateStr = `${viewYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
               const dayEvts = events.filter(e => e.date === formattedDateStr);
-              const isToday = currentMonthIndex === 7 && dayNum === 9; // Aug 9
+              const isToday = isSameCalendarDay(new Date(viewYear, currentMonthIndex, dayNum), today);
 
               return (
                 <div
                   key={`day-${dayNum}`}
+                  aria-current={isToday ? 'date' : undefined}
                   className={`h-20 p-2 rounded-lg border transition flex flex-col justify-between ${
                     isToday
                       ? 'bg-amber-100 border-amber-400 ring-2 ring-amber-500/40'
@@ -237,7 +258,7 @@ export const AlmanacCalendar: React.FC = () => {
                       {dayNum}
                     </span>
                     {isToday && (
-                      <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" />
+                      <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" aria-hidden="true" />
                     )}
                   </div>
 
@@ -265,7 +286,7 @@ export const AlmanacCalendar: React.FC = () => {
         <div className="space-y-4">
           <div className="bg-gradient-to-br from-stone-900 to-amber-950 text-amber-50 p-6 rounded-2xl border border-amber-800/40 shadow-sm space-y-4">
             <h3 className="text-lg font-serif-title font-bold text-amber-100 flex items-center space-x-2">
-              <Gift className="w-5 h-5 text-amber-400" />
+              <Gift className="w-5 h-5 text-amber-400" aria-hidden="true" />
               <span>Upcoming Keepsake Dates</span>
             </h3>
 

@@ -1,0 +1,17 @@
+name = "keepsake-almanac"
+compatibility_date = "2026-08-28"
+pages_build_output_dir = "dist"
+
+# Optional KV binding for functions/api/submit-memory.ts. The Function works
+# fine without this (it just skips server-side persistence and still saves
+# locally on the client) — add this once a real namespace exists.
+#
+# Create it with:  wrangler kv namespace create MEMORIES
+# then paste the returned id below, OR add the same binding name/namespace
+# under Cloudflare Pages dashboard -> Settings -> Functions -> KV namespace
+# bindings if this project deploys via the dashboard's Git integration
+# rather than `wrangler pages deploy`.
+#
+# [[kv_namespaces]]
+# binding = "MEMORIES"
+# id = "REPLACE_WITH_REAL_NAMESPACE_ID"
