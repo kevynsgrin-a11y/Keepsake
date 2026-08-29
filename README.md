@@ -1,32 +1,67 @@
-# React + TypeScript + Vite
+# Keepsake Almanac
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Family Milestone Vault & Daily Heritage Calendar — keepsakealmanac.com
 
-Currently, two official plugins are available:
+A privacy-first, no-account browser app for recording family memories, heirloom
+recipes, calendar events, and time capsules. Content is saved locally in the
+browser first, with an optional server-side backup via Cloudflare KV.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Operated by Oak and Main Developers LLC.
 
-## React Compiler
+## Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19 + TypeScript, built with Vite
+- Tailwind CSS 4 (CSS-first config, no `tailwind.config.js`)
+- React Router for client-side routing
+- Cloudflare Pages for hosting, with one Pages Function (`functions/api/submit-memory.ts`)
+- `vite-plugin-pwa` for the installable/offline service worker
 
-## Expanding the Oxlint configuration
+## Local development
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci
+npm run dev       # start the dev server
+npm run lint      # oxlint
+npm run build     # type-check + production build to dist/
+npm run preview   # serve the production build locally
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Data storage
+
+Everything a user enters is saved to `localStorage` in their own browser —
+memories, family members, calendar events, and time capsules each persist
+under their own key (see `src/hooks/usePersistedState.ts`). There is no
+account system.
+
+Saving a memory also POSTs to `/api/submit-memory`, a Cloudflare Pages
+Function that writes to a KV namespace **if one is bound** as `MEMORIES`.
+Without that binding the function still validates the request and returns
+success, so local storage is never affected either way — the KV write is a
+best-effort backup, not the primary datastore.
+
+To enable it: create a namespace (`wrangler kv namespace create MEMORIES`)
+and either bind it in the Cloudflare Pages dashboard under
+Settings → Functions, or uncomment and fill in the `[[kv_namespaces]]` block
+in `wrangler.toml`.
+
+## Deployment
+
+Deploys via Cloudflare Pages. `public/_headers` sets security headers
+(CSP, HSTS, etc.) and `public/_redirects` provides the SPA fallback so
+deep links like `/vault` work on refresh — both are read automatically by
+Cloudflare Pages from the build output.
+
+## Project structure
+
+```
+src/
+  components/       UI components, one per section/feature
+  components/legal/ Privacy Policy & Terms of Service pages
+  data/             Static sample data (fictional demo content, clearly
+                     disclosed as such in the UI)
+  hooks/            usePersistedState, useModalDismiss
+  utils/almanac.ts  Date-driven season/moon-phase/sunrise-sunset calculations
+functions/api/      Cloudflare Pages Functions
+public/             Static assets, robots.txt, sitemap.xml, manifest.json,
+                     _headers, _redirects
+```

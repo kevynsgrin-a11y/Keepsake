@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Scroll, Heart, Tag, MapPin, Calendar, User, Search, Filter, Grid, List, Sparkles, Utensils, Award, BookOpen } from 'lucide-react';
+import { Scroll, Heart, MapPin, Calendar, Grid, List } from 'lucide-react';
 import { MemoryItem } from '../data/keepsakeData';
 
 interface MilestoneVaultProps {
@@ -24,7 +24,7 @@ export const MilestoneVault: React.FC<MilestoneVaultProps> = ({
 
   const filteredMemories = memories.filter(mem => {
     const matchesCategory = selectedCategory === 'All' || mem.category === selectedCategory;
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       mem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       mem.fullStory.toLowerCase().includes(searchQuery.toLowerCase()) ||
       mem.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -45,7 +45,7 @@ export const MilestoneVault: React.FC<MilestoneVaultProps> = ({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      
+
       {/* Header & Controls */}
       <div className="bg-white/90 rounded-2xl p-6 border border-amber-200/80 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -59,36 +59,41 @@ export const MilestoneVault: React.FC<MilestoneVaultProps> = ({
 
         {/* Category Pills & View Switcher */}
         <div className="flex flex-wrap items-center gap-2">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                selectedCategory === cat
-                  ? 'bg-amber-900 text-amber-100 shadow-xs'
-                  : 'bg-amber-100/60 text-stone-700 hover:bg-amber-200/70'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-          
+          <div role="group" aria-label="Filter by category" className="flex flex-wrap items-center gap-2">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                aria-pressed={selectedCategory === cat}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  selectedCategory === cat
+                    ? 'bg-amber-900 text-amber-100 shadow-xs'
+                    : 'bg-amber-100/60 text-stone-700 hover:bg-amber-200/70'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
           <div className="h-6 w-px bg-amber-300/60 mx-1 hidden sm:block" />
 
-          <div className="flex items-center space-x-1 bg-amber-100/60 p-1 rounded-lg border border-amber-200">
+          <div className="flex items-center space-x-1 bg-amber-100/60 p-1 rounded-lg border border-amber-200" role="group" aria-label="Change view">
             <button
               onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+              aria-pressed={viewMode === 'grid'}
               className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-white shadow-xs text-amber-900' : 'text-stone-500'}`}
-              title="Grid View"
             >
-              <Grid className="w-4 h-4" />
+              <Grid className="w-4 h-4" aria-hidden="true" />
             </button>
             <button
               onClick={() => setViewMode('list')}
+              aria-label="List view"
+              aria-pressed={viewMode === 'list'}
               className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-white shadow-xs text-amber-900' : 'text-stone-500'}`}
-              title="List View"
             >
-              <List className="w-4 h-4" />
+              <List className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -97,7 +102,7 @@ export const MilestoneVault: React.FC<MilestoneVaultProps> = ({
       {/* Empty State */}
       {filteredMemories.length === 0 && (
         <div className="text-center py-16 bg-white/60 rounded-2xl border border-dashed border-amber-300 p-8 space-y-4">
-          <Scroll className="w-12 h-12 text-amber-400 mx-auto" />
+          <Scroll className="w-12 h-12 text-amber-400 mx-auto" aria-hidden="true" />
           <h3 className="text-lg font-serif-title font-bold text-stone-800">
             No memories match your filter
           </h3>
@@ -128,6 +133,11 @@ export const MilestoneVault: React.FC<MilestoneVaultProps> = ({
                     <img
                       src={mem.imageUrl}
                       alt={mem.title}
+                      loading="lazy"
+                      decoding="async"
+                      width={800}
+                      height={450}
+                      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/images/memory-placeholder.svg'; }}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                     />
                     <button
@@ -135,9 +145,11 @@ export const MilestoneVault: React.FC<MilestoneVaultProps> = ({
                         e.stopPropagation();
                         onToggleFavorite(mem.id);
                       }}
+                      aria-label={mem.isFavorite ? `Remove "${mem.title}" from favorites` : `Add "${mem.title}" to favorites`}
+                      aria-pressed={!!mem.isFavorite}
                       className="absolute top-3 right-3 p-2 bg-stone-900/60 hover:bg-stone-900/90 text-amber-200 rounded-full backdrop-blur-xs transition"
                     >
-                      <Heart className={`w-4 h-4 ${mem.isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                      <Heart className={`w-4 h-4 ${mem.isFavorite ? 'fill-red-500 text-red-500' : ''}`} aria-hidden="true" />
                     </button>
                     <span className={`absolute bottom-3 left-3 px-2.5 py-0.5 text-[11px] font-bold rounded-full border shadow-xs ${getCategoryBadgeColor(mem.category)}`}>
                       {mem.category}
@@ -153,9 +165,11 @@ export const MilestoneVault: React.FC<MilestoneVaultProps> = ({
                         e.stopPropagation();
                         onToggleFavorite(mem.id);
                       }}
+                      aria-label={mem.isFavorite ? `Remove "${mem.title}" from favorites` : `Add "${mem.title}" to favorites`}
+                      aria-pressed={!!mem.isFavorite}
                       className="p-1.5 text-stone-400 hover:text-red-500 transition"
                     >
-                      <Heart className={`w-4 h-4 ${mem.isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                      <Heart className={`w-4 h-4 ${mem.isFavorite ? 'fill-red-500 text-red-500' : ''}`} aria-hidden="true" />
                     </button>
                   </div>
                 )}
@@ -163,13 +177,13 @@ export const MilestoneVault: React.FC<MilestoneVaultProps> = ({
                 {/* Card Body */}
                 <div className="p-5 space-y-3">
                   <div className="flex items-center space-x-2 text-xs text-amber-800 font-medium">
-                    <Calendar className="w-3.5 h-3.5" />
+                    <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>{mem.date}</span>
                     {mem.location && (
                       <>
                         <span>•</span>
                         <span className="flex items-center space-x-1">
-                          <MapPin className="w-3 h-3 text-amber-700" />
+                          <MapPin className="w-3 h-3 text-amber-700" aria-hidden="true" />
                           <span>{mem.location}</span>
                         </span>
                       </>
@@ -252,9 +266,11 @@ export const MilestoneVault: React.FC<MilestoneVaultProps> = ({
                     e.stopPropagation();
                     onToggleFavorite(mem.id);
                   }}
+                  aria-label={mem.isFavorite ? `Remove "${mem.title}" from favorites` : `Add "${mem.title}" to favorites`}
+                  aria-pressed={!!mem.isFavorite}
                   className="p-2 text-stone-400 hover:text-red-500 transition"
                 >
-                  <Heart className={`w-4 h-4 ${mem.isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                  <Heart className={`w-4 h-4 ${mem.isFavorite ? 'fill-red-500 text-red-500' : ''}`} aria-hidden="true" />
                 </button>
                 <span className="text-xs font-semibold text-amber-800 hover:underline">
                   View Details

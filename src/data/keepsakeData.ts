@@ -27,6 +27,13 @@ export interface FamilyMember {
   keyMemoriesCount: number;
 }
 
+export interface OnThisDayEvent {
+  year: number;
+  text: string;
+  category: string;
+  monthDay: string; // "MM-DD", matched against the real current date
+}
+
 export interface AlmanacDay {
   dateString: string; // e.g. "August 9"
   seasonName: string; // "High Summer"
@@ -35,7 +42,7 @@ export interface AlmanacDay {
   sunInfo: { sunrise: string; sunset: string };
   weatherLore: string;
   quote: { text: string; author: string };
-  onThisDayEvents: { year: number; text: string; category: string }[];
+  onThisDayEvents: OnThisDayEvent[];
 }
 
 export interface TimeCapsule {
@@ -49,24 +56,15 @@ export interface TimeCapsule {
   sealedSecretCount: number;
 }
 
-export const CURRENT_ALMANAC: AlmanacDay = {
-  dateString: "August 9",
-  seasonName: "High Summer Almanac",
-  lunarPhase: "Waxing Gibbous (84% Light)",
-  lunarIcon: "🌔",
-  sunInfo: { sunrise: "06:12 AM", sunset: "08:04 PM" },
-  weatherLore: "When dew lies thick upon the morning grass, expect a clear, warm day to pass.",
-  quote: {
-    text: "The stories we tell our children become the foundation stones upon which they build their tomorrows.",
-    author: "Eleanor Vance, 1948"
-  },
-  onThisDayEvents: [
-    { year: 1854, text: "The Great Overland Family Expedition reached the Willamette Valley after 160 days on the trail.", category: "Family Pioneer History" },
-    { year: 1936, text: "Grandmother Rose recorded her very first handwritten preserve recipe in her red linen journal.", category: "Heirloom Moment" },
-    { year: 1969, text: "The Harrison Family Cottage was dedicated at Whispering Pines Lake.", category: "Milestone" },
-    { year: 2004, text: "Three generations assembled to plant the Centennial Oak tree at the homestead.", category: "Tradition" }
-  ]
-};
+// Sample "on this day" entries for the fictional demo family, each anchored to
+// the real calendar date it was written for. Any date without a matching entry
+// shows an honest empty state rather than fabricated content — see DailyAlmanac.tsx.
+export const SAMPLE_ON_THIS_DAY_EVENTS: OnThisDayEvent[] = [
+  { year: 1854, text: "The Great Overland Family Expedition reached the Willamette Valley after 160 days on the trail.", category: "Family Pioneer History", monthDay: "08-09" },
+  { year: 1936, text: "Grandmother Rose recorded her very first handwritten preserve recipe in her red linen journal.", category: "Heirloom Moment", monthDay: "08-09" },
+  { year: 1969, text: "The Harrison Family Cottage was dedicated at Whispering Pines Lake.", category: "Milestone", monthDay: "08-09" },
+  { year: 2004, text: "Three generations assembled to plant the Centennial Oak tree at the homestead.", category: "Tradition", monthDay: "08-09" }
+];
 
 export const INITIAL_MEMORIES: MemoryItem[] = [
   {
@@ -80,7 +78,7 @@ export const INITIAL_MEMORIES: MemoryItem[] = [
     summary: "Handwritten recipe cards handed down during the summer harvest of 1942.",
     fullStory: "Every July, when the wild blackberries ripened along the creek bed, Grandmother Rose would bake four pies before sunrise. The secret was a pinch of freshly ground green cardamom and a tablespoon of clover honey folded into the wild berry reduction. She always insisted that pie crust should be handled only with cool hands on marble.",
     tags: ["Recipe", "Baking", "Summer Harvest", "Parchment Original"],
-    imageUrl: "https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "/images/blackberry-pie.svg",
     isFavorite: true
   },
   {
@@ -94,7 +92,7 @@ export const INITIAL_MEMORIES: MemoryItem[] = [
     summary: "50 years of marriage celebrated with 42 family members aboard the Steamer Rose.",
     fullStory: "To mark 50 years together, Arthur rented the historic timber vessel for a sunset cruise. As the accordions played old waltzes, Arthur gave a toast that is still remembered: 'Love is not a solitary path, but a road built brick by brick through decades of shared sun and storm.'",
     tags: ["Anniversary", "Celebration", "Golden Jubilee", "Family Gathering"],
-    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "/images/anniversary-voyage.svg",
     isFavorite: true
   },
   {
@@ -108,7 +106,7 @@ export const INITIAL_MEMORIES: MemoryItem[] = [
     summary: "Reflections on patience, measure, and grain from 40 years of timber craftsmanship.",
     fullStory: "Measure twice, cut once, but listen to the wood always. When you work with white oak or walnut, you are collaborating with decades of rain and sun. Respect the grain, and never force a joint that asks for gentle alignment.",
     tags: ["Woodworking", "Life Wisdom", "Craftsmanship", "Notes"],
-    imageUrl: "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "/images/woodworking-notebook.svg",
     isFavorite: false
   },
   {
@@ -122,7 +120,7 @@ export const INITIAL_MEMORIES: MemoryItem[] = [
     summary: "The 30-year family tradition of crafting brass candle lanterns and walking the orchard at dusk.",
     fullStory: "Started in 1985 by Aunt Margaret, every October after the last apple is picked, adults and children carry lit parchment lanterns through the twilight rows, singing harvest folk melodies and sipping hot spiced cider.",
     tags: ["Tradition", "Autumn", "Harvest", "Lanterns"],
-    imageUrl: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "/images/lantern-procession.svg",
     isFavorite: true
   },
   {
@@ -136,7 +134,7 @@ export const INITIAL_MEMORIES: MemoryItem[] = [
     summary: "Receiving the University Dean's Gold Medal in Architectural Engineering.",
     fullStory: "Carrying her great-grandmother's silver fountain pen in her pocket, Sarah walked across the stage as the family cheered from the front rows. Grandma Rose wept tears of joy, remembering when girls in her village were denied school books.",
     tags: ["Graduation", "Education", "Milestone", "Pride"],
-    imageUrl: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "/images/graduation.svg",
     isFavorite: false
   }
 ];
@@ -150,7 +148,7 @@ export const INITIAL_FAMILY_MEMBERS: FamilyMember[] = [
     deathYear: "1994",
     hometown: "St. Paul, Minnesota",
     motto: "Honor in all deeds, kindness in all speech.",
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
+    avatarUrl: "/images/avatar-arthur.svg",
     generation: "Ancestors",
     keyMemoriesCount: 14
   },
@@ -161,7 +159,7 @@ export const INITIAL_FAMILY_MEMBERS: FamilyMember[] = [
     birthYear: "1924",
     hometown: "Cedar Crest, Oregon",
     motto: "A warm table cures a heavy heart.",
-    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80",
+    avatarUrl: "/images/avatar-rose.svg",
     generation: "Grandparents",
     keyMemoriesCount: 28
   },
@@ -172,7 +170,7 @@ export const INITIAL_FAMILY_MEMBERS: FamilyMember[] = [
     birthYear: "1958",
     hometown: "Portland, Oregon",
     motto: "Build for the next hundred years.",
-    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80",
+    avatarUrl: "/images/avatar-david.svg",
     generation: "Parents",
     keyMemoriesCount: 19
   },
@@ -183,7 +181,7 @@ export const INITIAL_FAMILY_MEMBERS: FamilyMember[] = [
     birthYear: "1989 & 1992",
     hometown: "Seattle, Washington",
     motto: "Preserving yesterday for tomorrow's dreamers.",
-    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+    avatarUrl: "/images/avatar-elena-marcus.svg",
     generation: "Current Gen",
     keyMemoriesCount: 12
   }

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Clock, Lock, Unlock, Key, Sparkles, AlertCircle, Plus } from 'lucide-react';
+import { Clock, Lock, Unlock, Plus } from 'lucide-react';
 import { TimeCapsule, TIME_CAPSULES } from '../data/keepsakeData';
+import { usePersistedState } from '../hooks/usePersistedState';
+import { RecommendedResources } from './RecommendedResources';
 
 export const TimeCapsules: React.FC = () => {
-  const [capsules, setCapsules] = useState<TimeCapsule[]>(TIME_CAPSULES);
+  const [capsules, setCapsules] = usePersistedState<TimeCapsule[]>('keepsake_time_capsules', TIME_CAPSULES);
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
 
   const [title, setTitle] = useState('');
@@ -36,16 +38,19 @@ export const TimeCapsules: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      
+
       {/* Header */}
       <div className="bg-white/90 rounded-2xl p-6 border border-amber-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-serif-title font-bold text-stone-900 flex items-center space-x-2">
-            <Clock className="w-6 h-6 text-amber-700" />
+            <Clock className="w-6 h-6 text-amber-700" aria-hidden="true" />
             <span>Digital Family Time Capsules</span>
           </h2>
           <p className="text-sm text-stone-600 font-garamond italic">
             Sealed milestone vaults, letters to future generations, and secret archives
+          </p>
+          <p className="text-xs text-stone-500 italic mt-1">
+            The capsules below are samples to illustrate the feature — seal your own to replace them.
           </p>
         </div>
 
@@ -53,7 +58,7 @@ export const TimeCapsules: React.FC = () => {
           onClick={() => setShowAddForm(!showAddForm)}
           className="px-4 py-2 bg-amber-900 hover:bg-amber-950 text-amber-100 text-xs font-medium rounded-lg transition flex items-center space-x-2 shadow-xs self-start sm:self-auto"
         >
-          <Plus className="w-4 h-4 text-amber-300" />
+          <Plus className="w-4 h-4 text-amber-300" aria-hidden="true" />
           <span>{showAddForm ? 'Close Form' : '+ Seal New Time Capsule'}</span>
         </button>
       </div>
@@ -64,8 +69,9 @@ export const TimeCapsules: React.FC = () => {
           <h3 className="text-base font-serif-title font-bold text-amber-950">Seal a New Family Time Capsule</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Capsule Title</label>
+              <label htmlFor="tc-title" className="block text-xs font-semibold text-amber-900 mb-1">Capsule Title</label>
               <input
+                id="tc-title"
                 type="text"
                 required
                 placeholder="e.g. Message for 2050 Grandchildren"
@@ -75,8 +81,9 @@ export const TimeCapsules: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Future Unlock Date</label>
+              <label htmlFor="tc-unlock-date" className="block text-xs font-semibold text-amber-900 mb-1">Future Unlock Date</label>
               <input
+                id="tc-unlock-date"
                 type="date"
                 required
                 value={unlockDate}
@@ -85,8 +92,9 @@ export const TimeCapsules: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-amber-900 mb-1">Sealed By (Contributor)</label>
+              <label htmlFor="tc-contributor" className="block text-xs font-semibold text-amber-900 mb-1">Sealed By (Contributor)</label>
               <input
+                id="tc-contributor"
                 type="text"
                 placeholder="e.g. Grandmother Rose"
                 value={contributor}
@@ -96,8 +104,9 @@ export const TimeCapsules: React.FC = () => {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-amber-900 mb-1">Preview / Dedication Note</label>
+            <label htmlFor="tc-preview" className="block text-xs font-semibold text-amber-900 mb-1">Preview / Dedication Note</label>
             <input
+              id="tc-preview"
               type="text"
               placeholder="e.g. Open on Sarah's 25th birthday..."
               value={previewText}
@@ -134,12 +143,12 @@ export const TimeCapsules: React.FC = () => {
                 }`}>
                   {cap.isUnlocked ? (
                     <>
-                      <Unlock className="w-3 h-3 text-green-700" />
+                      <Unlock className="w-3 h-3 text-green-700" aria-hidden="true" />
                       <span>UNLOCKED ARCHIVE</span>
                     </>
                   ) : (
                     <>
-                      <Lock className="w-3 h-3 text-amber-400" />
+                      <Lock className="w-3 h-3 text-amber-400" aria-hidden="true" />
                       <span>SEALED UNTIL {cap.unlockDate}</span>
                     </>
                   )}
@@ -176,6 +185,14 @@ export const TimeCapsules: React.FC = () => {
           </div>
         ))}
       </div>
+
+      <RecommendedResources
+        title="Seal It Properly"
+        links={[
+          { label: 'Memorial Keepsake Boxes', description: 'Engraved, archival-safe boxes built to be opened decades later.', href: '#' },
+          { label: 'Recordable Audio Keepsakes', description: 'Capture a voice or story to seal inside the next capsule.', href: '#' },
+        ]}
+      />
 
     </div>
   );
