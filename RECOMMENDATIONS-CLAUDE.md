@@ -4,6 +4,7 @@
 > **Role:** advisory only. Nothing here was executed, merged, or deployed. Kevyn feeds this to ZCode.
 > **Branch:** the handoff named `handoff/claude-audit`. That branch doesn't exist, and this session is pinned to `claude/compassionate-carson-8efj9q`, so the file lives there.
 > **Supersedes:** audit Issue #4 (2026-08-28) and action-plan Task 2 "Create & bind Cloudflare KV namespace" (2026-08-31). See P1-3.
+> **Decided 2026-10-03 (operator):** OD-1 = **A**, remove all three analytics paths. OD-2 = **A**, remove the server backup. Steps 0b and 2 are no longer conditional, and the Option-B material has been dropped from the plan. OD-3 through OD-8 are still open.
 
 ## Verdict
 
@@ -20,7 +21,7 @@
 - **Tests:** none today, and the only server file is never type-checked. A `tsx` + `node:test` + `node:assert` harness runs cleanly against this repo (prototyped in a scratch copy: 7 pass, 2 `todo`). The plan lands it first. Target-contract tests go in as `todo`, and each fix branch flips its own.
 - **Scope drift:** the code mostly matches the README's storage story. Two things drifted: (a) monetization and editorial surfaces the README doesn't mention; (b) an ops layer (proxy Worker, Zaraz, Web Analytics) that contradicts the README's first sentence.
 
-**Order:** Step 0 (operator: analytics off, KV frozen) → 01 harness → 02 remove the server POST → 03 storage durability → 04 import/restore → 05–07.
+**Order:** Step 0 (operator: analytics off, KV frozen) → 01 harness → 02 remove the server POST → 03 storage durability → 04 import/restore → 05–07. The operator chose option A for OD-1 and OD-2 on 2026-10-03.
 
 ### Privacy-contract scorecard (the handoff's failure modes)
 
@@ -78,7 +79,7 @@
   - From at least 2026-09-22 until the first deploy that carried the CSP (2026-09-28 16:16 UTC), nothing blocked it.
 - **Contradicts:** `src/components/legal/PrivacyPolicy.tsx:76-79` ("We do not use analytics, advertising pixels, or tracking cookies of any kind"), the footer badge at `src/App.tsx:160`, and `README.md:5` ("privacy-first").
 - **Mitigating:** no memory content reaches analytics, because no user content ever appears in URLs or titles.
-- **Fix:** OD-1, then Step 0b. The CSP lock in `tests/privacy-surface.test.ts` keeps the gtag injection blocked. No repo test can see Zaraz, so it needs an ops check (Step 0b's verification).
+- **Fix:** Step 0b (OD-1 = A, decided). The CSP lock in `tests/privacy-surface.test.ts` keeps the gtag injection blocked. No repo test can see Zaraz, so it needs an ops check (Step 0b's verification).
 
 **P1-2 · Every saved memory leaves the browser, with no consent, notice, or toggle**
 - `src/components/AddMemoryModal.tsx:53-59` calls `fetch('/api/submit-memory')` with the full `MemoryItem` on every save. Fields captured in Chromium: `id, title, date, category, author, generation, location, summary, fullStory, tags, isFavorite`, plus `imageUrl` when set.
@@ -107,7 +108,7 @@
   curl -X POST localhost:8789/api/submit-memory -H 'Content-Type: text/plain' -d '{"id":"mem-1","title":"x","author":"attacker","injected":1}'
   npx wrangler kv key get mem-1 --namespace-id MEMORIES --local --persist-to .wrangler/state   # → the attacker record
   ```
-- **Fix:** OD-2. Recommended: remove the endpoint (Step 2).
+- **Fix:** Step 2 removes the endpoint and the client POST (OD-2 = A, decided).
 
 **P1-4 · Stored data is never validated or versioned: schema drift white-screens the app for good, and unreadable data is replaced by the sample family**
 - `src/hooks/usePersistedState.ts:13` trusts storage as-is (`JSON.parse(saved) as T`): no validation, no `schemaVersion`, no migrations. There's no error boundary anywhere (`src/main.tsx:7-13`, `src/App.tsx:96`).
@@ -151,7 +152,7 @@
   - Every guide's canonical URL, `og:url`, and internal links use trailing slashes (e.g. `public/questions-to-ask-grandparents.html:8,10,39,70`). Pages serves `/slug` and 308-redirects `/slug/` to it (verified in `wrangler pages dev`).
   - Verified: with the service worker in control, `/questions-to-ask-grandparents/` and `/how-to-record-family-stories/` render "Page Not Found". First visits (no service worker yet) work, via the 308.
 - **P2-7 · Server code is never type-checked, and CI runs no tests.**
-  - `tsconfig.app.json:25` includes only `src`. Checked on its own, `functions/` fails (`Cannot find name 'KVNamespace'` / `'PagesFunction'`); with `@cloudflare/workers-types` it passes `strict` unchanged.
+  - `tsconfig.app.json:25` includes only `src`. Checked on its own, `functions/` fails (`Cannot find name 'KVNamespace'` / `'PagesFunction'`); with `@cloudflare/workers-types` it passes `strict` unchanged. Under OD-2 = A, Step 2 deletes `functions/`, so no server type-check is planned. If server code ever returns, add `@cloudflare/workers-types` and a `tsconfig.functions.json` in the same PR.
   - `.github/workflows/ci.yml:15` pins Node 20 (end-of-life 2026-04-30), and there's no test step.
 - **P2-8 · Merging isn't deploying.** Production uses `ad_hoc` Direct Upload. Deploy history: `2026-08-09` (the pre-audit build), then `2026-09-28` (`271f60b`), then `2026-10-01` (`36ab8b6`). `main` had the audit fixes for a month before they went live. A privacy fix is only real once it's deployed and checked (OD-6).
 - **P2-9 · "On This Day in Family History" never shows the family's own history.** `DailyAlmanac.tsx:20-23` filters only `SAMPLE_ON_THIS_DAY_EVENTS`, which covers the fictional family on Aug 9. The empty state invites "Be the first to add one", but a memory dated today never shows up. The app's namesake daily feature ignores user data.
@@ -214,46 +215,43 @@ The README's storage section is accurate; it even documents the POST (`README.md
 - Every PR must pass this gate, and its description must list the finding IDs it closes:
   ```bash
   npm ci && npm run lint && npm run build && npm test
-  npm run typecheck:functions   # only while functions/ exists
   ```
 - Branch from `main` unless a step says otherwise.
-- Nothing here needs a secret. Don't create a KV namespace unless OD-2 = B.
+- Nothing here needs a secret. Don't create a KV namespace (OD-2 = A).
 - Zaraz, Web Analytics, and the `custom-domain-proxy` Worker belong to the operator/fleet. Don't change them from this repo.
 
 ### Step 0 · Operator actions (no code; do these first)
 - **0a · Freeze KV.** Don't bind `MEMORIES`, don't uncomment `wrangler.toml:15-17`, and strike Task 2 from the 2026-08-31 action plan.
-- **0b · Turn off analytics (if OD-1 = A).**
+- **0b · Turn off analytics (OD-1 = A, decided). This is the most urgent item, because Zaraz is sending data today.**
   1. Disable the Zaraz GA4 tool for this zone, or turn Zaraz off for the zone.
   2. Disable Web Analytics for the keepsakealmanac.com site.
   3. Delete the two keepsake entries from `GA4_MIDS` in `custom-domain-proxy` and redeploy that Worker (fleet infra, not this repo).
   Verify: Cloudflare GraphQL `zarazActionsAdaptiveGroups` for the zone stays at 0 for 48 hours, and `curl -s https://keepsakealmanac.com/almanac | grep -cE 'googletagmanager|cdn-cgi/zaraz|cloudflareinsights'` prints `0`.
-- **0c ·** Answer OD-2 through OD-8.
+- **0c ·** Answer OD-3 through OD-8. OD-1 and OD-2 are decided.
 
 ### Step 1 · `zcode/01-test-harness` (tests and tooling only; no app changes)
 - `package.json`:
-  - devDependencies: `tsx`, `@cloudflare/workers-types`.
-  - Scripts: `"test": "node --import tsx --test \"tests/**/*.test.ts\""` and `"typecheck:functions": "tsc -p tsconfig.functions.json"`.
-- `tsconfig.functions.json`: `include: ["functions"]`, `types: ["@cloudflare/workers-types"]`, `strict: true`, `noEmit: true`. Verified to pass on today's code with no source edits.
-- `.github/workflows/ci.yml`: `node-version: 22`, add `env: TZ: UTC`, and add `npm test` and `npm run typecheck:functions` steps.
+  - devDependency: `tsx`.
+  - Script: `"test": "node --import tsx --test \"tests/**/*.test.ts\""`.
+- `.github/workflows/ci.yml`: set `node-version: 22`, add `env: TZ: UTC`, and add an `npm test` step.
 - `.gitignore`: add `.wrangler/`.
-- New test files: `tests/helpers/mockKv.ts`, `tests/helpers/memoryStorage.ts`, `tests/almanac.test.ts`, `tests/submit-memory.contract.test.ts`, `tests/privacy-surface.test.ts`, `tests/static-site.test.ts`. Asserts are in the test spec below.
+- New test files: `tests/helpers/memoryStorage.ts`, `tests/almanac.test.ts`, `tests/privacy-surface.test.ts`, `tests/static-site.test.ts`. The asserts for each are in the test spec below.
   - Target-contract cases use `{ todo: '<branch that flips it>' }`, so CI stays green.
-- **Verify:** the gate passes. `npm test` reports passes plus some `todo`s, and `npm run typecheck:functions` exits 0.
+  - Skip a KV mock and tests for `functions/api/submit-memory.ts`: Step 2 deletes that file. Its current behavior is documented in P1-3, including the reproduction steps.
+- **Verify:** the gate passes, and `npm test` reports passes plus some `todo`s.
 
-### Step 2 · `zcode/02-server-backup-off` (OD-2 = A; after Step 1) → closes P1-2, P1-3
-- **Commit 1:**
-  - Delete `tests/submit-memory.contract.test.ts`.
-  - In `tests/privacy-surface.test.ts`, add the removal contract: `functions/` doesn't exist, and the network call-site allowlist is `[]`.
+### Step 2 · `zcode/02-server-backup-off` (OD-2 = A, decided; after Step 1) → closes P1-2, P1-3
+- **Commit 1:** in `tests/privacy-surface.test.ts`, turn the Step 2 `todo`s into normal tests: `functions/` doesn't exist, and the network call-site allowlist is `[]`.
 - **Commit 2:**
   - Delete the POST block at `AddMemoryModal.tsx:53-59`.
-  - Delete `functions/api/submit-memory.ts` and the whole `functions/` directory, along with `tsconfig.functions.json`, the `typecheck:functions` script and its CI step, and the `@cloudflare/workers-types` dependency.
-  - Replace the KV comment in `wrangler.toml` with one line pointing to OD-2.
+  - Delete `functions/api/submit-memory.ts` and the now-empty `functions/` directory.
+  - Replace the KV comment block in `wrangler.toml` (`:5-17`) with one line: the server backup was removed on purpose (OD-2 = A).
 - In the same PR, so the policy and the behavior never disagree:
   - `PrivacyPolicy.tsx`: drop the "Optionally, on our server" bullet (`:52-58`) and the server-deletion bullet (`:85`), and bump `LAST_UPDATED` (`:5`).
   - `TermsOfService.tsx`: update `:36-39` and `:56-59`.
   - `README.md`: update `:29-45`.
-- **Verify:** the gate passes; `grep -rn "fetch(" src/` prints nothing; `functions/` is gone.
-- If OD-2 = B, use `zcode/02-e2e-backup` and the spec in OD-2 instead.
+- **Verify:** the gate passes, `grep -rn "fetch(" src/` prints nothing, and `functions/` is gone.
+- **Deploy note for Kevyn:** after this deploys, any browser still running an old cached bundle will POST to `/api/submit-memory` until its service worker updates. Pages answers those requests with `405` (checked in `wrangler pages dev` with `functions/` removed), and the old client ignores the response. Nothing is received or stored.
 
 ### Step 3 · `zcode/03-storage-durability` (after Step 1; before Step 4) → closes P1-4, P1-5, P2-1, P2-2, P2-3, P3-9
 - **New `src/data/schema.ts`:**
@@ -341,11 +339,6 @@ The README's storage section is accurate; it even documents the POST (`README.md
 
 ### Test suite spec (file → asserts)
 
-**`tests/helpers/mockKv.ts`**
-- `MockKV`: `get`, `put`, `delete`, and `list` over a `Map`, plus a log of `puts`. Enforces KV's limits: 512-byte keys, 25 MiB values.
-- `ctx(request, env)` builds a `PagesFunction` context.
-- `post(body, headers)` builds a POST request.
-
 **`tests/helpers/memoryStorage.ts`**
 - `createStorage({ quotaChars?, throwOnAccess? })` implements `Storage`.
 - Past the quota, `setItem` throws `DOMException(…, 'QuotaExceededError')`.
@@ -364,22 +357,7 @@ The README's storage section is accurate; it even documents the POST (`README.md
 6. `getWeatherLore` returns the same value at 09:00 and 18:00 on one day, and repeats after 7 days. Pick dates away from DST changes.
 7. `buildTodayAlmanac(d, events).onThisDayEvents === events`, and `dateString` equals `d.toLocaleDateString('en-US', {month: 'long', day: 'numeric'})`.
 
-**`tests/submit-memory.contract.test.ts`** (Step 1 pins today's behavior; deleted in Step 2 if OD-2 = A)
-- **Pins** (pass today; name each after the finding it documents):
-  - `{}` → 400.
-  - A valid body with no binding → 200 `{success: true, persisted: false}`, with no KV calls.
-  - With `MockKV` → `persisted: true` and exactly one `put`.
-  - The client's `id` becomes the KV key, and a second `text/plain` POST with that `id` overwrites the record with injected fields (P1-3).
-  - The response carries `Access-Control-Allow-Origin: *` (P1-3).
-  - Malformed JSON → 500 that echoes the parser text (P1-3).
-- **Target if OD-2 = A** (`todo` until Step 2): `functions/` doesn't exist, and `src/` contains no `fetch(`, `sendBeacon`, or `XMLHttpRequest`.
-- **Target if OD-2 = B** (see the OD-2 spec):
-  - 401 with no token, 403 with the wrong token, 413 over 1 MB, 415 for non-JSON.
-  - The stored value's keys are a subset of `{v, iv, ct, updatedAt}`, i.e. no plaintext.
-  - GET returns the ciphertext only to the token holder. DELETE removes the record.
-  - No `Access-Control-Allow-Origin: *`.
-
-**`tests/privacy-surface.test.ts`** (Step 1)
+**`tests/privacy-surface.test.ts`** (Step 1; the Step 2 items become normal tests in Step 2)
 1. From `public/_headers`:
    - `script-src` is exactly `'self'`.
    - `connect-src` is exactly `'self'`.
@@ -389,6 +367,7 @@ The README's storage section is accurate; it even documents the POST (`README.md
 2. The network call sites in `src/**/*.{ts,tsx}` (`fetch(`, `sendBeacon`, `XMLHttpRequest`, `WebSocket`, `EventSource`) exactly match an allowlist: `['src/components/AddMemoryModal.tsx']` in Step 1, `[]` from Step 2 on.
 3. `index.html` and `public/*.html` contain no `<script src="http…">`, and no inline `<script>` other than `type="application/ld+json"`.
 4. The files that touch `localStorage` are a subset of an allowlist: `['src/App.tsx', 'src/hooks/usePersistedState.ts']` in Step 1, `['src/utils/storage.ts']` from Step 3 on.
+5. `functions/` does not exist, so the site has no server code (`todo` until Step 2). If server code ever comes back, that has to show up as a visible test change.
 
 **`tests/static-site.test.ts`** (Step 1; the `todo`s flip in Step 5)
 - **Passes today:** every sitemap `<loc>` maps to `public/<slug>.html` or to a route in `App.tsx`, and `robots.txt` points to the sitemap.
@@ -430,32 +409,19 @@ The README's storage section is accurate; it even documents the POST (`README.md
 
 ## Operator decisions needed
 
-**OD-1 · Analytics on keepsakealmanac.com** (blocks Step 0b and Step 7)
-- **A (recommended): remove all three** — the Zaraz GA4 tool, Web Analytics auto-install, and the proxy's gtag entry.
-  - Privacy is the product's differentiator, and the data is thin anyway: about 79 GA4 pageviews in 4 weeks.
-  - Cloudflare's server-side zone analytics already count requests, with no tracking in the browser.
-- **B: keep analytics.**
-  - Rewrite the policy to name GA4, Zaraz, and Web Analytics, along with any cookies or identifiers they use.
-  - Gate firing on consent (Zaraz has consent management).
-  - Stop calling the product "privacy-first".
-- **Either way:**
+**OD-1 · Analytics on keepsakealmanac.com: DECIDED 2026-10-03 → A, remove all three.**
+- The three are the Zaraz GA4 tool, Web Analytics auto-install, and the proxy's gtag entry. Step 0b carries out the removal; Step 7 brings the policy and README into line.
+- Rationale: privacy is the product's differentiator, and the data is thin anyway (about 79 GA4 pageviews in 4 weeks). Cloudflare's server-side zone analytics already count requests without any tracking in the browser.
+- Still open after removal:
   - The policy has been inaccurate since about 2026-09-06, when Zaraz started sending data.
   - Before 2026-09-28, production had no policy page at all.
   - Whether that calls for any notice or remediation is a question for counsel; this isn't legal advice.
-  - Check DevTools → Application → Cookies on the live site to see whether Zaraz set a client-ID cookie, since the policy says "no tracking cookies".
+  - Check DevTools → Application → Cookies on the live site to see whether Zaraz left a client-ID cookie, since the policy says "no tracking cookies".
 
-**OD-2 · Server-side backup** (blocks Step 2)
-- **A (recommended): remove it.** It gives users nothing (it can't restore), it's pure liability, and nothing was ever stored, so removing it loses no data.
-- **B: build a real one** (`zcode/02-e2e-backup`):
-  - Opt-in, with explicit consent copy.
-  - The client generates a random vault id and a recovery key. The key never leaves the device and is shown to the user once, as a recovery code.
-  - Data is encrypted in the browser with AES-GCM via WebCrypto. The server stores only ciphertext, keyed by vault id, plus a hash of a client-held write token (trust on first use).
-  - Limits and errors: 1 MB cap; 401/403/413/415 as in the test spec; a DELETE endpoint.
-  - A **new, dedicated** KV namespace.
-  - Restore: enter the recovery code on any device → download → decrypt → run it through the same validator as file import.
-  - The operator never sees content, so "privacy-first" stays true.
-- **C: keep the current design in any form.** Not recommended.
-- **Trade-off:** local-only storage with export/import is honest. But users who never export lose everything when they lose a device or the browser purges storage, Safari's 7-day ITP purge included. B is the only way to get "survives a lost phone" without accounts.
+**OD-2 · Server-side backup: DECIDED 2026-10-03 → A, remove it.**
+- Step 2 carries this out. The endpoint gave users nothing (it can't restore anything), it was pure liability, and nothing was ever stored, so removing it loses no data.
+- Consequence to keep in view: local-only storage with export/import is honest, but users who never export lose everything if they lose a device or the browser purges storage (Safari's 7-day ITP purge included). That makes Steps 3 and 4 (durability, then import and export reminders) the main protection.
+- If cross-device restore becomes a requirement later, the only design consistent with "privacy-first" is an opt-in, end-to-end-encrypted backup: data encrypted in the browser, the server holding ciphertext only, and a recovery code that stays with the user. Spec that as a new project; don't revive the old endpoint.
 
 **OD-3 · Sample data.** Two options: keep auto-seeded samples (with Clear samples fixed and delete added), or start empty with a "Load example family" button. Recommendation: start empty, so samples never mix with real data or leak into exports and print.
 
