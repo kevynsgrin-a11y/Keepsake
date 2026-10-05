@@ -4,7 +4,8 @@
 > **Role:** advisory only. Nothing here was executed, merged, or deployed. Kevyn feeds this to ZCode.
 > **Branch:** the handoff named `handoff/claude-audit`. That branch doesn't exist, and this session is pinned to `claude/compassionate-carson-8efj9q`, so the file lives there.
 > **Supersedes:** audit Issue #4 (2026-08-28) and action-plan Task 2 "Create & bind Cloudflare KV namespace" (2026-08-31). See P1-3.
-> **Decided 2026-10-03 (operator):** OD-1 = **A**, remove all three analytics paths. OD-2 = **A**, remove the server backup. Steps 0b and 2 are no longer conditional, and the Option-B material has been dropped from the plan. OD-3 through OD-8 are still open, as are OD-9 through OD-14, which were added 2026-10-05 together with the Phase 2 roadmap.
+> **Decided 2026-10-03 (operator):** OD-1 = **A**, remove all three analytics paths. OD-2 = **A**, remove the server backup. Steps 0b and 2 are no longer conditional, and the Option-B material has been dropped from the plan. OD-3 through OD-8 are still open, as are OD-10 through OD-14, which were added 2026-10-05 together with the Phase 2 roadmap.
+> **Decided 2026-10-05 (operator):** OD-9 = trailing slash with folder layout (`/slug/`). Step 5 is no longer conditional.
 
 ## Verdict
 
@@ -227,7 +228,7 @@ The README's storage section is accurate; it even documents the POST (`README.md
   2. Web Analytics: disable the keepsakealmanac.com site. Disable it rather than delete it, so its history is kept.
   3. Proxy Worker: the preferred fix is OD-10, which serves the domain from Pages directly and removes the two keepsake routes from `custom-domain-proxy`. The fallback is to delete the two keepsake entries from `GA4_MIDS` and redeploy the Worker. Either way, fryup.uk is unaffected.
   Verify: Cloudflare GraphQL `zarazActionsAdaptiveGroups` for the zone stays at 0 for 48 hours, and `curl -s https://keepsakealmanac.com/almanac | grep -cE 'googletagmanager|cdn-cgi/zaraz|cloudflareinsights'` prints `0`.
-- **0c ·** Answer OD-3 through OD-14. OD-1 and OD-2 are decided. OD-9 (URL convention) blocks Step 5 and should be settled before the next content wave.
+- **0c ·** Answer OD-3 through OD-8 and OD-10 through OD-14. OD-1, OD-2, and OD-9 are decided.
 
 ### Step 1 · `zcode/01-test-harness` (tests and tooling only; no app changes)
 - `package.json`:
@@ -302,7 +303,7 @@ The README's storage section is accurate; it even documents the POST (`README.md
   - Importing a file whose `imageUrl` uses `javascript:` strips that URL.
 
 ### Step 5 · `zcode/05-guide-urls-and-sw` (independent; after Step 1) → closes P2-6, P3-5
-- **URL convention (OD-9): trailing slash, with a folder layout.** This matches what's live: as of 2026-10-05, all 14 static pages (13 guides plus the `/guides/` hub) declare `/slug/` canonical URLs, and there are 247 internal links in that form. Only `sitemap.xml` uses the slash-less form.
+- **URL convention (OD-9, decided 2026-10-05): trailing slash, with a folder layout.** This matches what's live: as of 2026-10-05, all 14 static pages (13 guides plus the `/guides/` hub) declare `/slug/` canonical URLs, and there are 247 internal links in that form. Only `sitemap.xml` uses the slash-less form.
   - Move each `public/<slug>.html`, including `guides.html`, to `public/<slug>/index.html`. Verified with `wrangler pages dev`: `/slug/` returns 200, and both `/slug` and `/slug/index.html` 308-redirect to `/slug/`.
   - Change every guide `<loc>` in `sitemap.xml` to the trailing-slash form, so the canonical URL, sitemap entry, and internal links all agree.
   - Fix the `</</a>` in the six original guides.
@@ -525,10 +526,10 @@ Two numbers from the 2026-10-05 build shape this phase:
 
 **OD-8 · CI runtime.** Node 22 (recommended; satisfies Vite 8's `>=22.12` requirement) or Node 24.
 
-**OD-9 · URL convention for content pages.**
-- **Recommended: trailing slash with folder layout (`/slug/`).** It matches the 14 live canonical URLs and all 247 internal links, so only the sitemap and the file layout change (Step 5).
-- **Alternative: no slash (`/slug`).** That means rewriting 247 links and the content template.
-- Whichever you pick, it's one rule for every content wave.
+**OD-9 · URL convention for content pages: DECIDED 2026-10-05 → trailing slash with folder layout (`/slug/`).**
+- **Why:** it matches the 14 live canonical URLs and all 247 internal links, so only the sitemap and the file layout change (Step 5).
+- **Rejected:** no slash (`/slug`), which would have meant rewriting 247 links and the content template.
+- This is now the one rule for every content wave: new guides go in `public/<slug>/index.html` with a `/slug/` canonical URL and sitemap entry.
 
 **OD-10 · Serve keepsakealmanac.com directly from Pages.**
 - **Recommended.** Reactivate the two custom domains on the Pages project, point the apex and `www` at `keepsakealmanac.pages.dev`, remove the two keepsake routes from `custom-domain-proxy`, and redirect `www` to the apex.
