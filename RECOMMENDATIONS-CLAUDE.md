@@ -4,7 +4,7 @@
 > **Role:** advisory only. Nothing here was executed, merged, or deployed. Kevyn feeds this to ZCode.
 > **Branch:** the handoff named `handoff/claude-audit`. That branch doesn't exist, and this session is pinned to `claude/compassionate-carson-8efj9q`, so the file lives there.
 > **Supersedes:** audit Issue #4 (2026-08-28) and action-plan Task 2 "Create & bind Cloudflare KV namespace" (2026-08-31). See P1-3.
-> **Decided 2026-10-03 (operator):** OD-1 = **A**, remove all three analytics paths. OD-2 = **A**, remove the server backup. Steps 0b and 2 are no longer conditional, and the Option-B material has been dropped from the plan. OD-3 through OD-8 are still open.
+> **Decided 2026-10-03 (operator):** OD-1 = **A**, remove all three analytics paths. OD-2 = **A**, remove the server backup. Steps 0b and 2 are no longer conditional, and the Option-B material has been dropped from the plan. OD-3 through OD-8 are still open, as are OD-9 through OD-14, which were added 2026-10-05 together with the Phase 2 roadmap.
 
 ## Verdict
 
@@ -21,7 +21,7 @@
 - **Tests:** none today, and the only server file is never type-checked. A `tsx` + `node:test` + `node:assert` harness runs cleanly against this repo (prototyped in a scratch copy: 7 pass, 2 `todo`). The plan lands it first. Target-contract tests go in as `todo`, and each fix branch flips its own.
 - **Scope drift:** the code mostly matches the README's storage story. Two things drifted: (a) monetization and editorial surfaces the README doesn't mention; (b) an ops layer (proxy Worker, Zaraz, Web Analytics) that contradicts the README's first sentence.
 
-**Order:** Step 0 (operator: analytics off, KV frozen) → 01 harness → 02 remove the server POST → 03 storage durability → 04 import/restore → 05–07. The operator chose option A for OD-1 and OD-2 on 2026-10-03.
+**Order:** Step 0 (operator: analytics off, KV frozen) → 01 harness → 02 remove the server POST → 03 storage durability → 04 import/restore → 05–07. The operator chose option A for OD-1 and OD-2 on 2026-10-03. After that comes Phase 2 (Steps 8–15, added 2026-10-05): performance, SEO for the app's own pages, and the features that turn guide readers into vault users. Interview mode (Step 10) has the highest leverage.
 
 ### Privacy-contract scorecard (the handoff's failure modes)
 
@@ -72,7 +72,7 @@
 ### P1: fix before any promotion or KV binding
 
 **P1-1 · Production runs analytics the Privacy Policy says don't exist** (outside the repo)
-- **Zaraz** on zone `keepsakealmanac.com` has one tool, "Google Analytics 4", enabled. Settings: `autoInjectScript: true`, `historyChange: true` (tracks SPA route changes), no consent configuration. Cloudflare GraphQL `zarazActionsAdaptiveGroups` shows 79 `ga4` / `Pageview` actions from 2026-09-06 to 2026-10-03, the latest on 2026-10-03.
+- **Zaraz** on zone `keepsakealmanac.com` has one tool, "Google Analytics 4", enabled. Settings: `autoInjectScript: true`, `historyChange: true` (tracks SPA route changes), no consent configuration. Cloudflare GraphQL `zarazActionsAdaptiveGroups` shows 79 `ga4` / `Pageview` actions from 2026-09-06 to 2026-10-03, the latest on 2026-10-03. By 2026-10-05 the total was about 91, still firing.
 - **Cloudflare Web Analytics** has site `keepsakealmanac.com` with `auto_install: true`. `rumPageloadEventsAdaptiveGroups` recorded 80 page loads on 2026-09-28/29 and none since. I couldn't determine why it stopped.
 - **Worker `custom-domain-proxy`** (v3, deployed 2026-09-22) injects `<script async src="https://www.googletagmanager.com/gtag/js?id=G-5VKBP1QHV3">` plus an inline `gtag()` bootstrap before `</head>` on every HTML response for the apex and `www`.
   - Today the repo CSP (`public/_headers:2`, `script-src 'self'`) blocks both scripts. Against a local replica of the Worker, Chromium logged two CSP violations and made zero requests to Google.
@@ -199,7 +199,7 @@ The README's storage section is accurate; it even documents the POST (`README.md
 | Daily Almanac: computed moon/sun/season, "On This Day", weather lore, quote, prompts | Only as `utils/almanac.ts` | The namesake feature, but it uses sample data only (P2-9) |
 | Family Heritage tree; Print & Export album | Implied | Print is just `window.print()` |
 | Affiliate "Recommended Resources" (3 placements, `href="#"`) | No | A monetization surface |
-| Six static editorial guides plus sitemap entries (GSC OPS, 2026-10-01) | No | Live outside the SPA; broken for returning visitors by P2-6 |
+| Static editorial guides plus sitemap entries: 6 (GSC OPS, 2026-10-01), grown by 2026-10-05 to 13 guides plus a `/guides/` hub | No | Live outside the SPA. The app links to none of them (Step 9), and returning visitors can't open them because of P2-6 (Step 5) |
 | Proxy Worker, Zaraz GA4, Web Analytics | No | Contradicts the README's first sentence (P1-1) |
 | "Heirloom recipes" | Yes | Only a memory category; there's no recipe structure |
 | GitHub description: "memory platform" | — | Implies accounts and sync, which don't exist |
@@ -222,12 +222,12 @@ The README's storage section is accurate; it even documents the POST (`README.md
 
 ### Step 0 · Operator actions (no code; do these first)
 - **0a · Freeze KV.** Don't bind `MEMORIES`, don't uncomment `wrangler.toml:15-17`, and strike Task 2 from the 2026-08-31 action plan.
-- **0b · Turn off analytics (OD-1 = A, decided). This is the most urgent item, because Zaraz is sending data today.**
-  1. Disable the Zaraz GA4 tool for this zone, or turn Zaraz off for the zone.
-  2. Disable Web Analytics for the keepsakealmanac.com site.
-  3. Delete the two keepsake entries from `GA4_MIDS` in `custom-domain-proxy` and redeploy that Worker (fleet infra, not this repo).
+- **0b · Turn off analytics (OD-1 = A, decided). This is the most urgent item: as of 2026-10-05, Zaraz had sent about 91 GA4 pageviews, 14 of them after 2026-10-03.** Do it in the Cloudflare dashboard. The Cloudflare connector used on 2026-10-05 can read these settings but not edit them: both write attempts returned `10000: Authentication error`, and nothing changed.
+  1. Zaraz (zone keepsakealmanac.com): turn off the "Google Analytics 4" tool, then turn off automatic script injection. The app never calls Zaraz itself, so nothing breaks.
+  2. Web Analytics: disable the keepsakealmanac.com site. Disable it rather than delete it, so its history is kept.
+  3. Proxy Worker: the preferred fix is OD-10, which serves the domain from Pages directly and removes the two keepsake routes from `custom-domain-proxy`. The fallback is to delete the two keepsake entries from `GA4_MIDS` and redeploy the Worker. Either way, fryup.uk is unaffected.
   Verify: Cloudflare GraphQL `zarazActionsAdaptiveGroups` for the zone stays at 0 for 48 hours, and `curl -s https://keepsakealmanac.com/almanac | grep -cE 'googletagmanager|cdn-cgi/zaraz|cloudflareinsights'` prints `0`.
-- **0c ·** Answer OD-3 through OD-8. OD-1 and OD-2 are decided.
+- **0c ·** Answer OD-3 through OD-14. OD-1 and OD-2 are decided. OD-9 (URL convention) blocks Step 5 and should be settled before the next content wave.
 
 ### Step 1 · `zcode/01-test-harness` (tests and tooling only; no app changes)
 - `package.json`:
@@ -301,15 +301,20 @@ The README's storage section is accurate; it even documents the POST (`README.md
   - Export, clear site data, then import: the counts and titles are identical.
   - Importing a file whose `imageUrl` uses `javascript:` strips that URL.
 
-### Step 5 · `zcode/05-sw-guide-routes` (independent; after Step 1) → closes P2-6, P3-5
-- In the workbox section of `vite.config.ts`, add: `navigateFallbackDenylist: [/^\/api\//, /^\/(questions-to-ask-grandparents|how-to-record-family-stories|family-milestones-by-age|memory-box-ideas|babys-first-year-keepsake-checklist|preserve-old-family-photos)\/?$/]`.
-- In the six guides:
-  - Drop the trailing slash from the canonical URL and `og:url`, so they match `sitemap.xml` and the target Pages redirects to.
-  - Drop trailing slashes from internal links.
-  - Fix the `</</a>`.
-- `index.html`: remove the static canonical tag, or set it per route.
+### Step 5 · `zcode/05-guide-urls-and-sw` (independent; after Step 1) → closes P2-6, P3-5
+- **URL convention (OD-9): trailing slash, with a folder layout.** This matches what's live: as of 2026-10-05, all 14 static pages (13 guides plus the `/guides/` hub) declare `/slug/` canonical URLs, and there are 247 internal links in that form. Only `sitemap.xml` uses the slash-less form.
+  - Move each `public/<slug>.html`, including `guides.html`, to `public/<slug>/index.html`. Verified with `wrangler pages dev`: `/slug/` returns 200, and both `/slug` and `/slug/index.html` 308-redirect to `/slug/`.
+  - Change every guide `<loc>` in `sitemap.xml` to the trailing-slash form, so the canonical URL, sitemap entry, and internal links all agree.
+  - Fix the `</</a>` in the six original guides.
+- In the workbox section of `vite.config.ts`, add a `navigateFallbackDenylist` covering `/api/`, `/guides/`, and every guide path, both with and without the slash.
+  - Better: build the list at build time from the folders in `public/`, so new guides are covered automatically.
+  - Without this, the service worker answers guide URLs with the SPA's 404.
+- `index.html`: remove the blanket canonical tag (Step 9 adds per-route canonicals).
 - Flip the `static-site` todos.
-- **Verify:** the gate passes, and `grep -c denylist dist/sw.js` prints at least 1. Manually: with the service worker in control, `/questions-to-ask-grandparents/` shows the guide.
+- **Verify:**
+  - The gate passes, and `grep -c denylist dist/sw.js` prints at least 1.
+  - Manually: with the service worker in control, `/questions-to-ask-grandparents/` shows the guide, and `/questions-to-ask-grandparents` 308-redirects to it.
+- **Rule for content waves (GSC OPS and others):** every new guide goes in `public/<slug>/index.html`, with a trailing-slash canonical URL and a matching trailing-slash sitemap entry. `static-site.test.ts` enforces this on every PR. Each new guide written the old way adds another page that returning visitors can't open.
 
 ### Step 6 · `zcode/06-honest-ui` (after Step 3) → closes P2-4, P2-5, P2-9, P2-10, P3-2 to P3-4, P3-6
 - Remove the seeded comments and the fake audio block. Persisting notes instead would add a fifth collection to the schema and export (OD-4).
@@ -336,6 +341,90 @@ The README's storage section is accurate; it even documents the POST (`README.md
   - An Infrastructure section naming the proxy Worker, Zaraz, and Web Analytics, their state after Step 0, and who owns each.
   - The editorial pages, the monetization placements, and how to run the tests.
 - Privacy Policy: an analytics statement that matches the OD-1 outcome, a privacy contact email (OD-5), and a bumped `LAST_UPDATED`. Then send it for counsel review.
+
+### Phase 2 · Growth and performance (Steps 8–15; start once Steps 1–5 are merged)
+
+Ordered by impact, with the same ground rules: tests first and one branch per step.
+
+Two numbers from the 2026-10-05 build shape this phase:
+- The app ships as a single 344.7 KB JS chunk (104.7 KB gzipped): react-dom is 52%, app code 26%, react-router 11%, canvas-confetti 3%.
+- The guides ship no JS, and their fonts are system fonts. Once Step 0b removes the injected analytics, they're about as fast as a page can be. The app is where performance work pays off.
+
+**Step 8 · `zcode/08-perf-quick-wins`** (no behavior change)
+- **Self-host fonts.** Ship only the faces actually used: Inter 400–700 (or the variable font), Playfair Display 700, and Cormorant Garamond 400 and 400 italic. Confirm against the CSS first.
+  - Use the Latin subset with `font-display: swap`, and preload the face the hero headline uses.
+  - Remove the Google Fonts links (`index.html:57-59`), then tighten the CSP to `font-src 'self'` and `style-src 'self' 'unsafe-inline'`.
+  - This removes a third party and a render-blocking request (closes P3-1).
+- **Code-split by route.** Lazy-load every route except `/almanac`, plus the two modals. Load `canvas-confetti` only on the first save.
+- **Cache hashed assets.** In `_headers`, give `/assets/*` the header `Cache-Control: public, max-age=31536000, immutable`, so repeat visits stop revalidating files whose names already change on every build.
+- **Trim the service worker.** Add `globIgnores: ['og-image.png']`; that one image is 361 KB of a roughly 900 KiB precache.
+- **Guard it in CI.** Add a size budget that fails the build if initial JS exceeds about 90 KB gzipped, and run Lighthouse CI on `/almanac` and one guide.
+- **Optional, only if Lighthouse shows JS is the bottleneck:** switching to `preact/compat` would save roughly 40 KB gzipped, at some compatibility risk with React 19 and React Router 7.
+- **Verify:**
+  - The initial chunk is under budget and Lighthouse CI passes.
+  - A local run makes no requests to Google Fonts.
+
+**Step 9 · `zcode/09-seo-app-routes`** (closes the rest of P3-5)
+- Give each app route its own `<title>`, description, and canonical URL via a small `useDocumentMeta` hook (no new dependency).
+- **Link the app to the guides.** Add "Guides" to the header and footer, pointing at `/guides/`. Today the app links to none of the 13 guides, and only the guides link into the app.
+- Unknown routes should render `NotFound` with `<meta name="robots" content="noindex">`, so search engines don't index the "soft 404" pages.
+- **Only if Search Console shows the app routes aren't indexed:**
+  - Prerender them at build time as `dist/<route>.html` (static meta and copy only, with date-dependent content left to the client). That keeps today's URLs, because Pages serves `/vault` from `vault.html` (verified for the guides).
+  - Implement it with `react-dom/server` plus `StaticRouter`. It depends on Step 3, because module-level `localStorage` reads have to be guarded first.
+
+**Step 10 · `zcode/10-interview-mode`** (the single biggest lever)
+- **The gap:** the content waves bring in people searching "questions to ask your grandmother/parents/a dying loved one". Right now they read a list and leave, because nothing on the page leads into the app.
+- `src/data/questionSets.ts`: one question set per guide (grandparents, grandmother, grandfather, parents, family-recipe, holiday, reunion, dying-loved-one), with a stable id for every question.
+- An `/interview/:setId` route:
+  - Shows one question at a time with an answer box and skip/next.
+  - Saving creates a memory: the title is the question, the tags are the set id, and the category is inferred.
+  - Shows progress and resumes where the user left off. Everything stays local.
+- Each guide gets an "Answer these in your vault →" button that links to `/interview/<setId>`. The URL only ever carries our own ids, never user content, so "no personal data in query strings" stays true.
+- **Measurement without tracking:** Cloudflare's server-side analytics count first-visit arrivals at `/interview/*` by path.
+- **Tests:** `tests/interview.test.ts`:
+  - Every guide's set id exists.
+  - An answer produces a memory that passes the schema.
+  - The resume state survives a reload (the reducer is a pure function).
+
+**Step 11 · `zcode/11-indexeddb-and-photos`** (after Steps 3 and 4)
+- **Move storage to IndexedDB.** Use `idb-keyval` (about 1 KB) behind the Step 3 storage interface. Migrate once, and keep the `localStorage` copy until the IndexedDB copy has been read back and the item counts match.
+- **Photo attachments.** Pick from files or the camera roll, resize in the browser (longest side about 1600 px, roughly 80% JPEG/WebP quality), and store the blobs in IndexedDB.
+  - Show storage use from `navigator.storage.estimate()` in Settings, and call `navigator.storage.persist()`.
+- **Export as a zip.** Package `backup.json` plus a `photos/` folder using `fflate`, loaded only when the user exports. Import validates exactly as in Step 4.
+- **Why:** photos are the feature people most expect from a memory keeper, and `localStorage`'s roughly 5 MB limit can't hold them (P2-1).
+
+**Step 12 · `zcode/12-calendar-ics-and-print`**
+- **Calendar export:** "Add to my calendar" downloads an `.ics` file covering birthdays, anniversaries, and memorials, each repeating yearly (`RRULE`). Reminders arrive on the user's own calendar with no server involved.
+- **Print album:** a real lineage page built from the family members, a recipe-card layout for heirloom recipes, proper page breaks, and a cover with the family's name.
+- **Recipe fields:** optional ingredients and steps for heirloom-recipe memories. This is a schema v2 migration through Step 3's `migrate`.
+
+**Step 13 · `zcode/13-install-and-backup-nudges`**
+- **Install prompt:** after the third saved item, prompt to install the app. Android gets the browser's `beforeinstallprompt`; iOS gets an instruction sheet. Home-screen web apps on iOS are exempt from Safari's 7-day storage purge.
+- **Backup reminder:** after a set number of changes or 30 days, show "Download a backup" (from Step 4). On mobile, use the Web Share API to send the file to Files, Drive, or email.
+
+**Step 14 · `zcode/14-guide-template-rules`** (applies to every future content wave)
+- **Every guide must have:**
+  - The folder layout, trailing-slash canonical URL, and sitemap entry from Step 5.
+  - `Article` and `BreadcrumbList` JSON-LD. Skip FAQ and HowTo markup: Google stopped showing those rich results for most sites in 2023.
+  - A visible author and last-updated date.
+  - Links to `/guides/` and to the matching interview set.
+  - A print stylesheet plus a "Print this list" button, to capture "printable" searches.
+  - No invented statistics or quotes.
+- **Add an `/about/` page** covering who runs the site, why it's private by design, and how to check: the Network tab shows nothing leaving the browser on save. It builds trust, counts toward Google's E-E-A-T quality signals, and works as marketing.
+- **Enforce it:** `static-site.test.ts` checks the mechanical rules on every PR, so content waves can't regress them.
+
+**Step 15 · `zcode/15-affiliate`** (after OD-11)
+- Replace the placeholder links in the three app placements with real affiliate links. Add contextual links in the guides: recorders for "how to record", archival boxes for "memory box", scanners for "preserve photos".
+- Mark links `rel="sponsored noopener"` and put a disclosure next to each placement.
+- Add one sentence to the privacy policy: affiliate partners may set cookies after a visitor clicks through to their site.
+
+### Phase 3 · Later bets (each is its own project; the operator picks the order, OD-14)
+- **Voice recordings:** record in the browser and store locally. Needs `Permissions-Policy: microphone=(self)` and a privacy-policy update.
+- **A real family tree:** parent/child links plus GEDCOM import and export (the standard genealogy file format). This reaches genealogy users and fits DNA-kit affiliates.
+- **Sealed time capsules that actually seal:** passphrase encryption with WebCrypto, an exportable sealed file to hand to someone, and an `.ics` reminder for the unlock date.
+- **A shareable offline keepsake book:** one self-contained HTML file with the data and photos embedded, sent by email or AirDrop. Sharing needs no server, and every shared copy carries the site's name.
+- **Opt-in end-to-end-encrypted sync,** only if people actually ask for cross-device access (see the OD-2 note).
+- **Spanish editions** of the app and the top guides.
 
 ### Test suite spec (file → asserts)
 
@@ -370,12 +459,13 @@ The README's storage section is accurate; it even documents the POST (`README.md
 5. `functions/` does not exist, so the site has no server code (`todo` until Step 2). If server code ever comes back, that has to show up as a visible test change.
 
 **`tests/static-site.test.ts`** (Step 1; the `todo`s flip in Step 5)
-- **Passes today:** every sitemap `<loc>` maps to `public/<slug>.html` or to a route in `App.tsx`, and `robots.txt` points to the sitemap.
+- **Passes today:** every sitemap `<loc>` maps either to a file in `public/` (`<slug>.html` or `<slug>/index.html`) or to a route in `App.tsx`, and `robots.txt` points to the sitemap.
 - **`todo` until Step 5:**
-  - Each guide's canonical URL and `og:url` equal its sitemap `<loc>`.
-  - No internal links of the form `href="/<slug>/"`.
+  - Every guide lives at `public/<slug>/index.html`.
+  - For each guide, the canonical URL, `og:url`, and sitemap `<loc>` are all `https://keepsakealmanac.com/<slug>/`.
+  - Every internal link to a guide uses the `/<slug>/` form.
   - No `</</a>`.
-  - The workbox denylist covers every guide slug.
+  - The workbox denylist covers every folder in `public/` that contains an `index.html`.
 
 **`tests/storage.test.ts`** (Step 3)
 1. A missing key → `missing`, and the hook seeds `initial`. The first-visit path is unchanged.
@@ -434,3 +524,33 @@ The README's storage section is accurate; it even documents the POST (`README.md
 **OD-7 · Calendar semantics.** Should Birthday, Anniversary, and Memorial events recur every year? Recommendation: yes.
 
 **OD-8 · CI runtime.** Node 22 (recommended; satisfies Vite 8's `>=22.12` requirement) or Node 24.
+
+**OD-9 · URL convention for content pages.**
+- **Recommended: trailing slash with folder layout (`/slug/`).** It matches the 14 live canonical URLs and all 247 internal links, so only the sitemap and the file layout change (Step 5).
+- **Alternative: no slash (`/slug`).** That means rewriting 247 links and the content template.
+- Whichever you pick, it's one rule for every content wave.
+
+**OD-10 · Serve keepsakealmanac.com directly from Pages.**
+- **Recommended.** Reactivate the two custom domains on the Pages project, point the apex and `www` at `keepsakealmanac.pages.dev`, remove the two keepsake routes from `custom-domain-proxy`, and redirect `www` to the apex.
+- **Why:**
+  - Every HTML response currently makes an extra hop through the proxy, which reads the whole page into memory before sending it, so visitors get the first byte later.
+  - It removes the shared proxy's ability to inject scripts into this site.
+  - The fallback in Step 0b (editing `GA4_MIDS`) becomes unnecessary.
+- **Side effect:** any fleet dashboard that reads GA4 will show zero for Keepsake once OD-1 is done. Use Cloudflare's server-side analytics and Search Console for this site instead.
+
+**OD-11 · Monetization policy.**
+- **Recommended: affiliate links only, no ad networks.** Ad networks mean third-party tracking scripts, which break the privacy promise and slow the pages down.
+- **Your call:** whether to include affiliate links for paid story-capture subscription services on the "questions" guides. They tend to convert well on that content, but they send readers away from the vault.
+
+**OD-12 · How to measure success without in-browser tracking.**
+- **Recommended, reviewed monthly:**
+  1. Search Console clicks and impressions for `/guides/*`.
+  2. Server-side request counts for first-visit arrivals at `/interview/*` and `/vault` (Cloudflare zone analytics, aggregate by path).
+  3. Affiliate revenue from the network dashboards.
+- **If real-user performance data is ever needed:** the honest option is Cloudflare Web Analytics, which is cookieless, with one line added to the policy. Not GA4.
+
+**OD-13 · Sequence approval.**
+- **Recommended:** Phase 1 (Steps 1–7) before any Phase 2 work, except Step 5, which should land before the next content wave.
+- Inside Phase 2, Step 10 (interview mode) has the highest return.
+
+**OD-14 · Phase 3 order.** Pick one or two of: voice recordings, family tree with GEDCOM, real sealed capsules, the shareable offline book, end-to-end-encrypted sync, Spanish.
